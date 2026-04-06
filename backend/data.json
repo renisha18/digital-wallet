@@ -1,0 +1,39 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "Renisha",
+      "password": "1234",
+      "balance": -19122
+    },
+    {
+      "id": 2,
+      "name": "Shreyaa",
+      "password": "abcd",
+      "balance": 20622
+    }
+  ],
+  "transactions": [
+    {
+      "fromUser": 1,
+      "toUser": 2,
+      "amount": 122,
+      "requestId": null,
+      "time": "2026-04-06T13:31:18.086Z"
+    },
+    {
+      "fromUser": 1,
+      "toUser": 2,
+      "amount": 10000,
+      "requestId": null,
+      "time": "2026-04-06T14:40:19.848Z"
+    },
+    {
+      "fromUser": 1,
+      "toUser": 2,
+      "amount": 10000,
+      "requestId": null,
+      "time": "2026-04-06T14:40:48.163Z"
+    }
+  ]
+}

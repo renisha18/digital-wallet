@@ -1,0 +1,110 @@
+===============================
+💀 DIGITAL WALLET ATTACKS DEMO
+===============================
+
+Backend URL:
+http://localhost:3002
+
+--------------------------------
+🔴 1. TRANSACTION TAMPERING ATTACK
+--------------------------------
+
+Description:
+Modify the transaction amount before sending to the server.
+
+Steps:
+1. Open Postman
+2. Select POST request
+3. Enter URL:
+   http://localhost:3002/send
+
+4. Go to Body → raw → JSON
+5. Enter:
+
+{
+  "fromUser": 1,
+  "toUser": 2,
+  "amount": 10000
+}
+
+6. Click Send
+
+Expected Result:
+- Transaction succeeds even if user does not have enough balance
+
+Impact:
+- Unauthorized money transfer
+- Financial manipulation
+
+--------------------------------
+🔁 2. REPLAY ATTACK
+--------------------------------
+
+Description:
+Repeat the same transaction multiple times.
+
+Steps:
+1. Send request:
+
+POST http://localhost:3002/send
+
+Body:
+{
+  "fromUser": 1,
+  "toUser": 2,
+  "amount": 100,
+  "requestId": "abc123"
+}
+
+2. Click Send multiple times
+
+Expected Result:
+- Money deducted again and again
+
+Impact:
+- Duplicate transactions
+- Loss of funds
+
+--------------------------------
+🔓 3. BROKEN AUTHENTICATION
+--------------------------------
+
+Description:
+Access APIs without logging in.
+
+Steps:
+1. Open browser or Postman
+2. Send request:
+
+GET http://localhost:3002/transactions
+
+Expected Result:
+- All transaction data is visible
+
+Impact:
+- Unauthorized access to user data
+
+--------------------------------
+🔍 4. SENSITIVE DATA EXPOSURE
+--------------------------------
+
+Description:
+View confidential user data.
+
+Steps:
+1. Send request:
+
+GET http://localhost:3002/balance/1
+
+Expected Result:
+{
+  "id": 1,
+  "name": "Alice",
+  "password": "1234",
+  "balance": 1000
+}
+
+Impact:
+- Password and sensitive data exposed
+- Privacy violation
+

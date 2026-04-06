@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WalletX — Sign In</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="shell">
+  <div class="page-login">
+
+    <!-- Hero -->
+    <div class="login-hero">
+      <div class="login-logo">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+          <line x1="1" y1="10" x2="23" y2="10"/>
+        </svg>
+      </div>
+      <h1>WalletX</h1>
+      <p>Your smart digital wallet</p>
+    </div>
+
+    <!-- Form -->
+    <div class="login-form">
+      <h2>Sign in to your account</h2>
+
+      <div id="alert-area"></div>
+
+      <div class="form-group">
+        <label class="form-label" for="userId">User ID</label>
+        <div class="form-input-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          <input class="form-input" type="text" id="userId" placeholder="Enter your User ID" autocomplete="username" autofocus>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="password">Password</label>
+        <div class="form-input-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          <input class="form-input" type="password" id="password" placeholder="Enter your password" autocomplete="current-password">
+        </div>
+      </div>
+
+      <button class="btn btn-primary" id="login-btn" onclick="doLogin()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+        </svg>
+        Sign In
+      </button>
+
+      <p class="text-center text-muted mt-16" style="font-size:.82rem">
+        Secure payments powered by WalletX&nbsp;🔒
+      </p>
+    </div>
+
+  </div>
+</div>
+
+<script src="wallet.js"></script>
+<script>
+  /* If already logged in, skip to dashboard */
+  if (store.get('userId')) window.location.href = 'dashboard.html';
+
+  async function doLogin() {
+    const userId   = document.getElementById('userId').value.trim();
+    const password = document.getElementById('password').value;
+    const btn      = document.getElementById('login-btn');
+    const alertArea = document.getElementById('alert-area');
+
+    if (!userId || !password) {
+      showAlert(alertArea, 'Please enter your User ID and password.', 'error');
+      return;
+    }
+
+    btnLoading(btn, true);
+
+    try {
+      await API_CALLS.login(userId, password);
+      store.set('userId', userId);
+      showAlert(alertArea, 'Login successful! Redirecting…', 'success');
+      setTimeout(() => window.location.href = 'dashboard.html', 800);
+    } catch (err) {
+      showAlert(alertArea, err.message || 'Invalid credentials. Please try again.', 'error');
+      btnLoading(btn, false);
+    }
+  }
+
+  /* Allow Enter key to submit */
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+</script>
+</body>
+</html>

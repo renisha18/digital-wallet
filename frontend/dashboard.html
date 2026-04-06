@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WalletX — Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- Navbar -->
+  <nav class="navbar" id="navbar"></nav>
+
+  <!-- Page -->
+  <main class="page" id="page">
+
+    <div id="alert-area"></div>
+
+    <!-- Balance Card (skeleton while loading) -->
+    <div class="card-gradient balance-card" id="balance-card">
+      <div class="balance-label">Total Balance</div>
+      <div class="balance-amount" id="balance-display">
+        <span class="balance-currency">₹</span>
+        <span id="balance-value"><span class="skeleton" style="width:120px;height:36px;display:inline-block;vertical-align:middle;background:rgba(255,255,255,.2);border-radius:8px;"></span></span>
+      </div>
+      <div class="balance-user" id="balance-user">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span id="user-id-label">Loading…</span>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <a href="send.html" class="qa-btn">
+        <div class="qa-icon qa-icon-blue">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </div>
+        <span class="qa-label">Send</span>
+      </a>
+      <button class="qa-btn" onclick="addMoney()">
+        <div class="qa-icon qa-icon-green">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </div>
+        <span class="qa-label">Add Money</span>
+      </button>
+      <a href="transactions.html" class="qa-btn">
+        <div class="qa-icon qa-icon-warn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+          </svg>
+        </div>
+        <span class="qa-label">History</span>
+      </a>
+      <button class="qa-btn" onclick="refreshBalance()">
+        <div class="qa-icon qa-icon-red">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+        </div>
+        <span class="qa-label">Refresh</span>
+      </button>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="section-header">
+      <h2 class="section-title">Recent Activity</h2>
+      <a href="transactions.html" class="section-link">View all →</a>
+    </div>
+
+    <div id="recent-txns">
+      <!-- Loading skeleton -->
+      <div class="txn-list">
+        ${[1,2,3].map(() => `
+          <div class="txn-item">
+            <div class="skeleton" style="width:42px;height:42px;border-radius:50%;flex-shrink:0"></div>
+            <div style="flex:1">
+              <div class="skeleton" style="width:60%;height:14px;border-radius:6px;margin-bottom:6px"></div>
+              <div class="skeleton" style="width:40%;height:12px;border-radius:6px"></div>
+            </div>
+            <div class="skeleton" style="width:60px;height:16px;border-radius:6px"></div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav" id="bottom-nav"></nav>
+
+</div>
+
+<script src="wallet.js"></script>
+<script>
+  const userId = requireAuth();
+
+  injectNavbar({ showAvatar: true });
+  injectBottomNav('dashboard');
+  document.getElementById('user-id-label').textContent = userId;
+
+  /* Load balance */
+  async function loadBalance() {
+    try {
+      const data = await API_CALLS.getBalance(userId);
+      document.getElementById('balance-value').textContent =
+        Number(data.balance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    } catch (err) {
+      document.getElementById('balance-value').textContent = '–';
+      showAlert(document.getElementById('alert-area'), 'Could not load balance: ' + err.message, 'error');
+    }
+  }
+
+  /* Load recent transactions (last 5) */
+  async function loadRecent() {
+    const container = document.getElementById('recent-txns');
+    try {
+      const txns = await API_CALLS.getTransactions(userId);
+      const recent = Array.isArray(txns) ? txns.slice(0, 5) : [];
+
+      if (!recent.length) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+            </svg>
+            <h3>No transactions yet</h3>
+            <p>Send money to get started</p>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = `<div class="txn-list">${recent.map(t => buildTxnRow(t)).join('')}</div>`;
+    } catch {
+      container.innerHTML = `<p class="text-muted text-center" style="font-size:.85rem;padding:20px 0">Could not load transactions.</p>`;
+    }
+  }
+
+  function buildTxnRow(t) {
+    const isSent = String(t.sender || t.senderId) === String(userId);
+    const cls    = isSent ? 'sent' : 'recv';
+    const other  = isSent ? (t.receiver || t.receiverId) : (t.sender || t.senderId);
+    const sign   = isSent ? '−' : '+';
+    const amt    = formatCurrency(t.amount);
+
+    return `
+      <div class="txn-item">
+        <div class="txn-avatar ${cls}">${getInitials(other)}</div>
+        <div class="txn-info">
+          <div class="txn-name">${other || 'Unknown'}</div>
+          <div class="txn-time">${formatDate(t.timestamp || t.createdAt || Date.now())}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="txn-amount ${cls}">${sign}${amt}</div>
+          <span class="txn-badge ${cls}">${isSent ? 'Sent' : 'Received'}</span>
+        </div>
+      </div>`;
+  }
+
+  function refreshBalance() {
+    loadBalance();
+    showAlert(document.getElementById('alert-area'), 'Balance refreshed!', 'success');
+  }
+
+  function addMoney() {
+    const amt = prompt('Enter amount to add (₹):');
+    if (!amt || isNaN(amt) || Number(amt) <= 0) return;
+    showAlert(document.getElementById('alert-area'), `Add Money feature — ₹${amt} request sent!`, 'info');
+  }
+
+  /* Init */
+  loadBalance();
+  loadRecent();
+</script>
+</body>
+</html>

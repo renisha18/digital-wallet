@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WalletX — Send Money</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .numpad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin: 0 0 20px;
+    }
+
+    .numpad-key {
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      font-family: var(--font-head);
+      font-size: 1.2rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .16s;
+      text-align: center;
+      color: var(--text);
+    }
+
+    .numpad-key:hover { background: var(--primary-soft); color: var(--primary); border-color: var(--primary); }
+    .numpad-key:active { transform: scale(.96); }
+
+    .numpad-key.del { color: var(--danger); }
+
+    .amount-display-wrap {
+      text-align: center;
+      padding: 10px 0 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+
+    .amount-cursor {
+      display: inline-block;
+      width: 2px; height: 2.2rem;
+      background: var(--primary);
+      margin-left: 2px;
+      vertical-align: middle;
+      animation: blink .9s step-end infinite;
+    }
+
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .mode-tabs {
+      display: flex;
+      background: var(--surface2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 4px;
+      margin-bottom: 22px;
+      gap: 4px;
+    }
+
+    .mode-tab {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 7px;
+      background: transparent;
+      font-family: var(--font-body);
+      font-size: .88rem;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--text-2);
+      transition: all .18s;
+    }
+
+    .mode-tab.active {
+      background: var(--surface);
+      color: var(--primary);
+      box-shadow: var(--shadow-sm);
+    }
+  </style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- Navbar -->
+  <nav class="navbar" id="navbar"></nav>
+
+  <main class="page">
+
+    <div id="alert-area"></div>
+
+    <!-- Mode tabs -->
+    <div class="mode-tabs">
+      <button class="mode-tab active" id="tab-numpad" onclick="switchMode('numpad')">Quick Send</button>
+      <button class="mode-tab" id="tab-form" onclick="switchMode('form')">Manual Entry</button>
+    </div>
+
+    <!-- ── NUMPAD MODE ── -->
+    <div id="mode-numpad">
+
+      <!-- Receiver -->
+      <div class="form-group">
+        <label class="form-label">Receiver ID</label>
+        <div class="form-input-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          <input class="form-input" type="text" id="receiver-np" placeholder="Enter receiver's User ID">
+        </div>
+      </div>
+
+      <!-- Amount display -->
+      <div class="amount-display-wrap">
+        <span id="amount-display" class="amount-big">₹0</span><span class="amount-cursor"></span>
+      </div>
+
+      <!-- Numpad -->
+      <div class="numpad" id="numpad"></div>
+
+      <button class="btn btn-primary" id="send-btn-np" onclick="doSend('numpad')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+        Send Money
+      </button>
+
+    </div>
+
+    <!-- ── FORM MODE ── -->
+    <div id="mode-form" style="display:none">
+      <div class="form-group">
+        <label class="form-label">Receiver ID</label>
+        <div class="form-input-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          <input class="form-input" type="text" id="receiver-fm" placeholder="Enter receiver's User ID">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Amount (₹)</label>
+        <div class="form-input-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+          </svg>
+          <input class="form-input" type="number" id="amount-fm" placeholder="0.00" min="1" step="0.01">
+        </div>
+      </div>
+
+      <!-- Quick amount chips -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
+        <span class="chip chip-primary" onclick="setQuickAmt(100)">₹100</span>
+        <span class="chip chip-primary" onclick="setQuickAmt(500)">₹500</span>
+        <span class="chip chip-primary" onclick="setQuickAmt(1000)">₹1,000</span>
+        <span class="chip chip-primary" onclick="setQuickAmt(2000)">₹2,000</span>
+        <span class="chip chip-primary" onclick="setQuickAmt(5000)">₹5,000</span>
+      </div>
+
+      <button class="btn btn-primary" id="send-btn-fm" onclick="doSend('form')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+        Send Money
+      </button>
+    </div>
+
+  </main>
+
+  <nav class="bottom-nav" id="bottom-nav"></nav>
+</div>
+
+<script src="wallet.js"></script>
+<script>
+  const userId = requireAuth();
+  injectNavbar({ title: 'Send Money', showBack: true, showAvatar: false });
+  injectBottomNav('send');
+
+  /* ── Numpad Logic ── */
+  let amountStr = '';
+
+  const numpadKeys = [
+    '1','2','3',
+    '4','5','6',
+    '7','8','9',
+    '.','0','⌫'
+  ];
+
+  const numpadEl = document.getElementById('numpad');
+  numpadKeys.forEach(k => {
+    const btn = document.createElement('button');
+    btn.className = 'numpad-key' + (k === '⌫' ? ' del' : '');
+    btn.textContent = k;
+    btn.addEventListener('click', () => handleNumpad(k));
+    numpadEl.appendChild(btn);
+  });
+
+  function handleNumpad(k) {
+    if (k === '⌫') {
+      amountStr = amountStr.slice(0, -1);
+    } else if (k === '.') {
+      if (!amountStr.includes('.')) amountStr += k;
+    } else {
+      if (amountStr.length >= 8) return;
+      amountStr += k;
+    }
+    updateAmountDisplay();
+  }
+
+  function updateAmountDisplay() {
+    const val = amountStr ? parseFloat(amountStr) : 0;
+    document.getElementById('amount-display').textContent =
+      `₹${amountStr || '0'}`;
+  }
+
+  /* ── Mode Switch ── */
+  function switchMode(m) {
+    document.getElementById('mode-numpad').style.display = m === 'numpad' ? '' : 'none';
+    document.getElementById('mode-form').style.display   = m === 'form'   ? '' : 'none';
+    document.getElementById('tab-numpad').classList.toggle('active', m === 'numpad');
+    document.getElementById('tab-form').classList.toggle('active', m === 'form');
+  }
+
+  function setQuickAmt(n) {
+    document.getElementById('amount-fm').value = n;
+  }
+
+  /* ── Send ── */
+  async function doSend(mode) {
+    const alertArea = document.getElementById('alert-area');
+
+    let receiverId, amount;
+
+    if (mode === 'numpad') {
+      receiverId = document.getElementById('receiver-np').value.trim();
+      amount     = parseFloat(amountStr);
+    } else {
+      receiverId = document.getElementById('receiver-fm').value.trim();
+      amount     = parseFloat(document.getElementById('amount-fm').value);
+    }
+
+    if (!receiverId)     return showAlert(alertArea, 'Please enter a receiver ID.', 'error');
+    if (!amount || amount <= 0) return showAlert(alertArea, 'Please enter a valid amount.', 'error');
+    if (receiverId === userId) return showAlert(alertArea, 'You cannot send money to yourself.', 'error');
+
+    const btn = document.getElementById(mode === 'numpad' ? 'send-btn-np' : 'send-btn-fm');
+    btnLoading(btn, true);
+
+    try {
+      const data = await API_CALLS.sendMoney(userId, receiverId, amount);
+      showAlert(alertArea, data.message || `Successfully sent ${formatCurrency(amount)} to ${receiverId}!`, 'success');
+
+      /* Reset */
+      amountStr = '';
+      updateAmountDisplay();
+      document.getElementById('receiver-np').value = '';
+      document.getElementById('receiver-fm').value = '';
+      document.getElementById('amount-fm').value   = '';
+
+    } catch (err) {
+      showAlert(alertArea, err.message || 'Transaction failed. Please try again.', 'error');
+    } finally {
+      btnLoading(btn, false);
+    }
+  }
+</script>
+</body>
+</html>

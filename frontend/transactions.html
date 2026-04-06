@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WalletX — Transaction History</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .stats-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+
+    .stat-card {
+      padding: 16px;
+      border-radius: var(--radius-md);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-card-sent { background: var(--danger-soft); }
+    .stat-card-recv { background: var(--accent-soft); }
+
+    .stat-label {
+      font-size: .75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .stat-card-sent .stat-label { color: var(--danger); }
+    .stat-card-recv .stat-label { color: var(--accent); }
+
+    .stat-amount {
+      font-family: var(--font-head);
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+
+    .stat-card-sent .stat-amount { color: var(--danger); }
+    .stat-card-recv .stat-amount { color: var(--accent); }
+
+    .stat-count { font-size: .78rem; color: var(--text-3); }
+
+    .txn-date-group {
+      margin-bottom: 6px;
+    }
+
+    .txn-date-label {
+      font-size: .75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text-3);
+      margin: 16px 0 8px;
+    }
+
+    .search-bar {
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .search-bar input {
+      width: 100%;
+      padding: 12px 12px 12px 42px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: var(--font-body);
+      font-size: .9rem;
+      background: var(--surface2);
+      outline: none;
+      transition: border-color .18s;
+    }
+
+    .search-bar input:focus { border-color: var(--primary); background: #fff; }
+
+    .search-bar svg {
+      position: absolute;
+      left: 14px; top: 50%;
+      transform: translateY(-50%);
+      width: 17px; height: 17px;
+      color: var(--text-3);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+
+<div class="shell">
+
+  <nav class="navbar" id="navbar"></nav>
+
+  <main class="page">
+
+    <div id="alert-area"></div>
+
+    <!-- Stats -->
+    <div class="stats-row" id="stats-row">
+      <div class="stat-card stat-card-sent">
+        <span class="stat-label">💸 Total Sent</span>
+        <span class="stat-amount" id="stat-sent">—</span>
+        <span class="stat-count" id="stat-sent-count"></span>
+      </div>
+      <div class="stat-card stat-card-recv">
+        <span class="stat-label">💰 Total Received</span>
+        <span class="stat-amount" id="stat-recv">—</span>
+        <span class="stat-count" id="stat-recv-count"></span>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar" id="filter-bar">
+      <span class="chip chip-primary active-filter" data-filter="all"   onclick="setFilter('all')">All</span>
+      <span class="chip" style="background:var(--danger-soft);color:var(--danger);border-color:#f5c6cb;cursor:pointer" data-filter="sent" onclick="setFilter('sent')">Sent</span>
+      <span class="chip" style="background:var(--accent-soft);color:var(--accent);border-color:#b7dfbc;cursor:pointer" data-filter="recv" onclick="setFilter('recv')">Received</span>
+    </div>
+
+    <!-- Search -->
+    <div class="search-bar">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" id="search-input" placeholder="Search by user ID…" oninput="renderTxns()">
+    </div>
+
+    <!-- Transaction list -->
+    <div id="txn-container">
+      <div class="loader-wrap"><div class="loader"></div><span class="loader-text">Loading transactions…</span></div>
+    </div>
+
+  </main>
+
+  <nav class="bottom-nav" id="bottom-nav"></nav>
+</div>
+
+<script src="wallet.js"></script>
+<script>
+  const userId = requireAuth();
+  injectNavbar({ title: 'History', showBack: true, showAvatar: false });
+  injectBottomNav('transactions');
+
+  let allTxns = [];
+  let currentFilter = 'all';
+
+  async function loadTxns() {
+    const container = document.getElementById('txn-container');
+    try {
+      const data = await API_CALLS.getTransactions(userId);
+      allTxns = Array.isArray(data) ? data : [];
+      computeStats();
+      renderTxns();
+    } catch (err) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <h3>Could not load transactions</h3>
+          <p>${err.message}</p>
+        </div>`;
+    }
+  }
+
+  function computeStats() {
+    let sentAmt = 0, recvAmt = 0, sentCnt = 0, recvCnt = 0;
+    allTxns.forEach(t => {
+      if (String(t.sender || t.senderId) === String(userId)) {
+        sentAmt += Number(t.amount); sentCnt++;
+      } else {
+        recvAmt += Number(t.amount); recvCnt++;
+      }
+    });
+
+    document.getElementById('stat-sent').textContent  = formatCurrency(sentAmt);
+    document.getElementById('stat-recv').textContent  = formatCurrency(recvAmt);
+    document.getElementById('stat-sent-count').textContent = `${sentCnt} transaction${sentCnt !== 1 ? 's' : ''}`;
+    document.getElementById('stat-recv-count').textContent = `${recvCnt} transaction${recvCnt !== 1 ? 's' : ''}`;
+  }
+
+  function setFilter(f) {
+    currentFilter = f;
+    document.querySelectorAll('[data-filter]').forEach(el => {
+      el.style.fontWeight = el.dataset.filter === f ? '700' : '600';
+      el.style.opacity    = el.dataset.filter === f ? '1' : '.65';
+    });
+    renderTxns();
+  }
+
+  function renderTxns() {
+    const container = document.getElementById('txn-container');
+    const query     = (document.getElementById('search-input').value || '').toLowerCase();
+
+    let filtered = allTxns.filter(t => {
+      const isSent = String(t.sender || t.senderId) === String(userId);
+      if (currentFilter === 'sent' && !isSent) return false;
+      if (currentFilter === 'recv' && isSent)  return false;
+      if (query) {
+        const other = isSent ? (t.receiver || t.receiverId) : (t.sender || t.senderId);
+        if (!String(other).toLowerCase().includes(query)) return false;
+      }
+      return true;
+    });
+
+    if (!filtered.length) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/>
+          </svg>
+          <h3>No transactions found</h3>
+          <p>Try a different filter or search term</p>
+        </div>`;
+      return;
+    }
+
+    /* Group by date */
+    const groups = {};
+    filtered.forEach(t => {
+      const d   = new Date(t.timestamp || t.createdAt || Date.now());
+      const key = d.toDateString();
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(t);
+    });
+
+    container.innerHTML = Object.entries(groups).map(([date, txns]) => `
+      <div class="txn-date-group">
+        <div class="txn-date-label">${formatGroupDate(date)}</div>
+        <div class="txn-list">
+          ${txns.map(t => buildRow(t)).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function buildRow(t) {
+    const isSent = String(t.sender || t.senderId) === String(userId);
+    const cls    = isSent ? 'sent' : 'recv';
+    const other  = isSent ? (t.receiver || t.receiverId) : (t.sender || t.senderId);
+    const sign   = isSent ? '−' : '+';
+    const amt    = formatCurrency(t.amount);
+
+    return `
+      <div class="txn-item">
+        <div class="txn-avatar ${cls}">${getInitials(other)}</div>
+        <div class="txn-info">
+          <div class="txn-name">${other || 'Unknown'}</div>
+          <div class="txn-time">${formatDate(t.timestamp || t.createdAt || Date.now())}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="txn-amount ${cls}">${sign}${amt}</div>
+          <span class="txn-badge ${cls}">${isSent ? 'Sent' : 'Received'}</span>
+        </div>
+      </div>`;
+  }
+
+  function formatGroupDate(dateStr) {
+    const d   = new Date(dateStr);
+    const now = new Date();
+    if (d.toDateString() === now.toDateString()) return 'Today';
+    const yest = new Date(now); yest.setDate(now.getDate() - 1);
+    if (d.toDateString() === yest.toDateString()) return 'Yesterday';
+    return d.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' });
+  }
+
+  loadTxns();
+</script>
+</body>
+</html>
